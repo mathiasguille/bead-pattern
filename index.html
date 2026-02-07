@@ -32,6 +32,7 @@
               Download pattern
             </button>
           </div>
+          <p class="hint">💡 Tip: Use bold, simple images with clear outlines for best results.</p>
         </div>
         <div class="control-card">
           <div>
@@ -53,12 +54,34 @@
             </div>
           </div>
         </div>
+        <div class="control-card">
+          <div>
+            <h2>Grid Size</h2>
+            <p>Larger grids = more detail but more beads needed.</p>
+          </div>
+          <div class="control-actions" style="flex-direction: column; align-items: stretch; gap: 16px;">
+            <div class="form-group" style="flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="gridSizeSlider">Grid Size:</label>
+                <span id="gridSizeDisplay" style="font-weight: 600; font-size: 1.1rem;">18×18</span>
+              </div>
+              <input type="range" id="gridSizeSlider" min="10" max="40" value="18" step="2" style="width: 100%; cursor: pointer;" />
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #5a5a74;">
+                <span>10×10 (100 beads)</span>
+                <span>40×40 (1,600 beads)</span>
+              </div>
+            </div>
+            <p id="gridTradeoff" style="margin: 0; font-size: 0.85rem; color: #5a5a74; font-style: italic;">
+              💡 18×18 (324 beads): Balanced detail and complexity
+            </p>
+          </div>
+        </div>
       </section>
 
       <section class="workspace">
         <div class="canvas-wrapper">
           <h2>Bead Grid Preview</h2>
-          <p class="helper-text">
+          <p class="helper-text" id="gridHelperText">
             The grid below is always 18×18 beads. Upload a photo to get started.
           </p>
           <div id="canvasContainer" class="canvas-container">

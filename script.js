@@ -1,5 +1,7 @@
-const GRID_SIZE = 18;
 const CELL_SIZE = 20;
+const LABEL_OFFSET = 20; // Space reserved for labels
+let GRID_SIZE = 18;
+let CURRENT_IMAGE = null; // Store current image for re-rendering
 
 const PALETTES = {
   basic: [
@@ -54,6 +56,10 @@ const beadSummary = document.getElementById("beadSummary");
 const totalBeads = document.getElementById("totalBeads");
 const paletteSelect = document.getElementById("paletteSelect");
 const gridLabelsCheckbox = document.getElementById("gridLabelsCheckbox");
+const gridSizeSlider = document.getElementById("gridSizeSlider");
+const gridSizeDisplay = document.getElementById("gridSizeDisplay");
+const gridTradeoff = document.getElementById("gridTradeoff");
+const gridHelperText = document.getElementById("gridHelperText");
 
 const canvasContext = patternCanvas.getContext("2d");
 const offscreenCanvas = document.createElement("canvas");
@@ -62,8 +68,8 @@ const offscreenContext = offscreenCanvas.getContext("2d");
 offscreenCanvas.width = GRID_SIZE;
 offscreenCanvas.height = GRID_SIZE;
 
-patternCanvas.width = GRID_SIZE * CELL_SIZE;
-patternCanvas.height = GRID_SIZE * CELL_SIZE;
+patternCanvas.width = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
+patternCanvas.height = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
 
 const paletteUsage = new Map();
 let pixelGrid = null; // Store the palette indices for each pixel
@@ -125,15 +131,15 @@ function drawGrid() {
   canvasContext.lineWidth = 1;
 
   for (let i = 0; i <= GRID_SIZE; i += 1) {
-    const position = i * CELL_SIZE;
+    const position = i * CELL_SIZE + LABEL_OFFSET;
     canvasContext.beginPath();
-    canvasContext.moveTo(position, 0);
-    canvasContext.lineTo(position, GRID_SIZE * CELL_SIZE);
+    canvasContext.moveTo(position, LABEL_OFFSET);
+    canvasContext.lineTo(position, GRID_SIZE * CELL_SIZE + LABEL_OFFSET);
     canvasContext.stroke();
 
     canvasContext.beginPath();
-    canvasContext.moveTo(0, position);
-    canvasContext.lineTo(GRID_SIZE * CELL_SIZE, position);
+    canvasContext.moveTo(LABEL_OFFSET, position);
+    canvasContext.lineTo(GRID_SIZE * CELL_SIZE + LABEL_OFFSET, position);
     canvasContext.stroke();
   }
 }
@@ -143,27 +149,28 @@ function drawGridLabels() {
     return;
   }
 
-  const fontSize = 12;
-  canvasContext.font = `${fontSize}px Inter, Segoe UI, sans-serif`;
-  canvasContext.fillStyle = "#3f3f54";
+  const fontSize = 11;
+  const labelOffset = 20; // Space for labels
+  canvasContext.font = `bold ${fontSize}px Inter, Segoe UI, sans-serif`;
+  canvasContext.fillStyle = "#5a5a74";
+  
+  // Draw column labels (A-R) at top
   canvasContext.textAlign = "center";
-  canvasContext.textBaseline = "middle";
-
-  // Column labels (A-R)
+  canvasContext.textBaseline = "bottom";
   for (let i = 0; i < GRID_SIZE; i += 1) {
-    const letter = String.fromCharCode(65 + i); // A-Z
-    const x = i * CELL_SIZE + CELL_SIZE / 2;
-    const y = -6;
+    const letter = String.fromCharCode(65 + i); // A-R
+    const x = i * CELL_SIZE + CELL_SIZE / 2 + labelOffset;
+    const y = labelOffset - 5;
     canvasContext.fillText(letter, x, y);
   }
 
-  // Row labels (1-18)
+  // Draw row labels (1-18) at left
   canvasContext.textAlign = "right";
   canvasContext.textBaseline = "middle";
   for (let i = 0; i < GRID_SIZE; i += 1) {
     const number = i + 1;
-    const x = -6;
-    const y = i * CELL_SIZE + CELL_SIZE / 2;
+    const x = labelOffset - 8;
+    const y = i * CELL_SIZE + CELL_SIZE / 2 + labelOffset;
     canvasContext.fillText(number, x, y);
   }
 }
@@ -183,8 +190,8 @@ function redrawPattern() {
 
       canvasContext.fillStyle = `rgb(${r}, ${g}, ${b})`;
       canvasContext.fillRect(
-        x * CELL_SIZE,
-        y * CELL_SIZE,
+        x * CELL_SIZE + LABEL_OFFSET,
+        y * CELL_SIZE + LABEL_OFFSET,
         CELL_SIZE,
         CELL_SIZE
       );
@@ -193,6 +200,78 @@ function redrawPattern() {
 
   drawGrid();
   drawGridLabels();
+}
+
+function enhanceContrast(imageData) {
+  const data = imageData.data;
+  
+  // Find min/max brightness
+  let minBrightness = 255;
+  let maxBrightness = 0;
+  
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const brightness = (r + g + b) / 3;
+    
+    minBrightness = Math.min(minBrightness, brightness);
+    maxBrightness = Math.max(maxBrightness, brightness);
+  }
+  
+  const range = maxBrightness - minBrightness;
+  if (range < 10) return imageData; // Skip if low contrast
+  
+  // Stretch contrast
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    
+    data[i] = Math.round(((r - minBrightness) / range) * 255);
+    data[i + 1] = Math.round(((g - minBrightness) / range) * 255);
+    data[i + 2] = Math.round(((b - minBrightness) / range) * 255);
+  }
+  
+  return imageData;
+}
+
+function applyGaussianBlur(imageData) {
+  const data = imageData.data;
+  const width = GRID_SIZE;
+  const height = GRID_SIZE;
+  const kernel = [
+    [1, 2, 1],
+    [2, 4, 2],
+    [1, 2, 1]
+  ];
+  const weight = 16;
+  
+  const output = new Uint8ClampedArray(data);
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      let r = 0, g = 0, b = 0;
+      
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const idx = ((y + ky) * width + (x + kx)) * 4;
+          const kernelVal = kernel[ky + 1][kx + 1];
+          r += data[idx] * kernelVal;
+          g += data[idx + 1] * kernelVal;
+          b += data[idx + 2] * kernelVal;
+        }
+      }
+      
+      const idx = (y * width + x) * 4;
+      output[idx] = Math.round(r / weight);
+      output[idx + 1] = Math.round(g / weight);
+      output[idx + 2] = Math.round(b / weight);
+    }
+  }
+  
+  imageData.data.set(output);
+  return imageData;
 }
 
 function renderPattern(image) {
@@ -219,12 +298,21 @@ function renderPattern(image) {
     GRID_SIZE
   );
 
-  const imageData = offscreenContext.getImageData(
+  let imageData = offscreenContext.getImageData(
     0,
     0,
     GRID_SIZE,
     GRID_SIZE
   );
+
+  // Apply contrast enhancement to improve detail
+  imageData = enhanceContrast(imageData);
+  
+  // Apply Gaussian blur for smoother transitions
+  imageData = applyGaussianBlur(imageData);
+  
+  // Put processed image back
+  offscreenContext.putImageData(imageData, 0, 0);
 
   canvasContext.clearRect(0, 0, patternCanvas.width, patternCanvas.height);
   paletteUsage.clear();
@@ -255,8 +343,8 @@ function renderPattern(image) {
 
       canvasContext.fillStyle = `rgb(${r}, ${g}, ${b})`;
       canvasContext.fillRect(
-        x * CELL_SIZE,
-        y * CELL_SIZE,
+        x * CELL_SIZE + LABEL_OFFSET,
+        y * CELL_SIZE + LABEL_OFFSET,
         CELL_SIZE,
         CELL_SIZE
       );
@@ -285,6 +373,7 @@ imageInput.addEventListener("change", (event) => {
   const objectUrl = URL.createObjectURL(file);
 
   image.onload = () => {
+    CURRENT_IMAGE = image;
     renderPattern(image);
     URL.revokeObjectURL(objectUrl);
   };
@@ -303,6 +392,42 @@ function drawPlaceholder() {
   canvasContext.fillStyle = "#f0f0f7";
   canvasContext.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
   drawGrid();
+  drawGridLabels();
+}
+
+function updateGridSize(newSize) {
+  GRID_SIZE = newSize;
+  
+  // Update canvas size
+  patternCanvas.width = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
+  patternCanvas.height = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
+  
+  offscreenCanvas.width = GRID_SIZE;
+  offscreenCanvas.height = GRID_SIZE;
+  
+  // Update display and tradeoff message
+  gridSizeDisplay.textContent = `${GRID_SIZE}×${GRID_SIZE}`;
+  const totalBeadsCount = GRID_SIZE * GRID_SIZE;
+  
+  let tradeoffText = "";
+  if (GRID_SIZE <= 12) {
+    tradeoffText = `💡 ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads): Quick & simple, less detail`;
+  } else if (GRID_SIZE <= 18) {
+    tradeoffText = `💡 ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads): Balanced detail and complexity`;
+  } else if (GRID_SIZE <= 28) {
+    tradeoffText = `💡 ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads): High detail, more beads & time`;
+  } else {
+    tradeoffText = `💡 ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads): Maximum detail, very time-intensive`;
+  }
+  gridTradeoff.textContent = tradeoffText;
+  gridHelperText.textContent = `The grid is ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads total). Upload a photo to get started.`;
+  
+  // Re-render current pattern if one exists
+  if (CURRENT_IMAGE) {
+    renderPattern(CURRENT_IMAGE);
+  } else {
+    drawPlaceholder();
+  }
 }
 
 drawPlaceholder();
@@ -329,4 +454,9 @@ gridLabelsCheckbox.addEventListener("change", () => {
   } else {
     drawPlaceholder();
   }
+});
+
+// Event listener for grid size
+gridSizeSlider.addEventListener("input", (event) => {
+  updateGridSize(parseInt(event.target.value));
 });
