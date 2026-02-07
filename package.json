@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "save-baseline": "node scripts/save-baseline.js"
   },
   "devDependencies": {
     "jest": "^29.0.0"

@@ -66,6 +66,24 @@ All tests verify:
 
 Test coverage includes 16 test cases across edge cases, validation, and real-world scenarios.
 
+## Automated Quality Baselines
+This project supports automated baseline collection and regression checks for quantization quality.
+
+- To generate baseline metrics (synthetic samples), run:
+
+```bash
+npm run save-baseline
+```
+
+This writes `test-results/baseline.json` containing MSE and Delta-E metrics for sample images. Commit this baseline to your repo to use it as a reference for CI.
+
+- A regression test skeleton is included at `__tests__/regression.test.js`. It will ensure a baseline exists and can be extended to fail when metrics degrade beyond a threshold.
+
+Recommended workflow:
+- Run `npm run save-baseline` locally to produce a baseline and inspect numeric metrics.
+- Commit `test-results/baseline.json` to your branch (or store as CI artifact).
+- Expand the regression test to assert acceptable thresholds for MSE/Delta-E for your chosen samples.
+
 ## Tips for Best Results
 - **Use simple, high-contrast images** – logos, silhouettes, and drawings work best
 - **Avoid photorealistic images at small sizes** – use 24×24 or larger for photos
