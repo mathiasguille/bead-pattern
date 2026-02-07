@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bead Pattern Builder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>Bead Pattern Builder</h1>
+        <p>
+          Upload an image and turn it into an 18×18 bead design with a simple
+          color palette.
+        </p>
+      </header>
+
+      <section class="controls">
+        <label class="upload">
+          <span>Choose an image</span>
+          <input type="file" id="imageInput" accept="image/*" />
+        </label>
+        <button id="downloadButton" type="button" disabled>
+          Download pattern
+        </button>
+      </section>
+
+      <section class="workspace">
+        <div class="canvas-wrapper">
+          <h2>Bead Grid Preview</h2>
+          <canvas id="patternCanvas" width="360" height="360"></canvas>
+        </div>
+        <aside class="legend">
+          <h2>Palette</h2>
+          <ul id="paletteList"></ul>
+        </aside>
+      </section>
+
+      <section class="tips">
+        <h2>Tips</h2>
+        <ul>
+          <li>Simple shapes and high-contrast images work best.</li>
+          <li>The grid is always 18×18 (324 beads total).</li>
+          <li>Download the pattern for printing or sharing.</li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
