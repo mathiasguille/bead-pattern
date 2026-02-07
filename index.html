@@ -33,6 +33,26 @@
             </button>
           </div>
         </div>
+        <div class="control-card">
+          <div>
+            <h2>Palette & Options</h2>
+            <p>Choose a color palette and customize your grid display.</p>
+          </div>
+          <div class="control-actions">
+            <div class="form-group">
+              <label for="paletteSelect">Palette:</label>
+              <select id="paletteSelect">
+                <option value="basic">Basic</option>
+                <option value="pastel">Pastel</option>
+                <option value="bright">Bright</option>
+              </select>
+            </div>
+            <div class="form-group checkbox">
+              <input type="checkbox" id="gridLabelsCheckbox" />
+              <label for="gridLabelsCheckbox">Show grid labels (A–R, 1–18)</label>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="workspace">
@@ -41,11 +61,20 @@
           <p class="helper-text">
             The grid below is always 18×18 beads. Upload a photo to get started.
           </p>
-          <canvas id="patternCanvas" width="360" height="360"></canvas>
+          <div id="canvasContainer" class="canvas-container">
+            <canvas id="patternCanvas" width="360" height="360"></canvas>
+          </div>
         </div>
         <aside class="legend">
-          <h2>Palette</h2>
-          <ul id="paletteList"></ul>
+          <div>
+            <h2>Color Palette</h2>
+            <ul id="paletteList"></ul>
+          </div>
+          <div class="summary-section">
+            <h3>Bead Summary</h3>
+            <ul id="beadSummary" class="bead-summary"></ul>
+            <p id="totalBeads" class="total-beads"></p>
+          </div>
         </aside>
       </section>
 
