@@ -205,32 +205,106 @@ function redrawPattern() {
 function enhanceContrast(imageData) {
   const data = imageData.data;
   
-  // Find min/max brightness
-  let minBrightness = 255;
-  let maxBrightness = 0;
+  // Find min/max for each channel
+  let minR = 255, maxR = 0;
+  let minG = 255, maxG = 0;
+  let minB = 255, maxB = 0;
   
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
-    const brightness = (r + g + b) / 3;
+    const a = data[i + 3];
     
-    minBrightness = Math.min(minBrightness, brightness);
-    maxBrightness = Math.max(maxBrightness, brightness);
+    if (a > 128) { // Only consider opaque pixels
+      minR = Math.min(minR, r);
+      maxR = Math.max(maxR, r);
+      minG = Math.min(minG, g);
+      maxG = Math.max(maxG, g);
+      minB = Math.min(minB, b);
+      maxB = Math.max(maxB, b);
+    }
   }
   
-  const range = maxBrightness - minBrightness;
-  if (range < 10) return imageData; // Skip if low contrast
+  const rangeR = maxR - minR || 1;
+  const rangeG = maxG - minG || 1;
+  const rangeB = maxB - minB || 1;
   
-  // Stretch contrast
+  // Stretch each channel independently
   for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    
-    data[i] = Math.round(((r - minBrightness) / range) * 255);
-    data[i + 1] = Math.round(((g - minBrightness) / range) * 255);
-    data[i + 2] = Math.round(((b - minBrightness) / range) * 255);
+    data[i] = Math.round(((data[i] - minR) / rangeR) * 255);
+    data[i + 1] = Math.round(((data[i + 1] - minG) / rangeG) * 255);
+    data[i + 2] = Math.round(((data[i + 2] - minB) / rangeB) * 255);
+  }
+  
+  return imageData;
+}
+
+function applyAdaptiveHistogramEqualization(imageData) {
+  const data = imageData.data;
+  const width = GRID_SIZE;
+  const height = GRID_SIZE;
+  
+  // Apply CLAHE-like processing (Contrast Limited Adaptive Histogram Equalization)
+  const tileSize = Math.max(1, Math.floor(Math.sqrt(width * height / 16)));
+  
+  for (let ty = 0; ty < height; ty += tileSize) {
+    for (let tx = 0; tx < width; tx += tileSize) {
+      const tileW = Math.min(tileSize, width - tx);
+      const tileH = Math.min(tileSize, height - ty);
+      
+      // Build histogram for this tile
+      const hist = { r: {}, g: {}, b: {} };
+      let count = 0;
+      
+      for (let y = ty; y < ty + tileH; y++) {
+        for (let x = tx; x < tx + tileW; x++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const a = data[idx + 3];
+          
+          if (a > 128) {
+            hist.r[r] = (hist.r[r] || 0) + 1;
+            hist.g[g] = (hist.g[g] || 0) + 1;
+            hist.b[b] = (hist.b[b] || 0) + 1;
+            count++;
+          }
+        }
+      }
+      
+      if (count === 0) continue;
+      
+      // Build cumulative distribution
+      const cdfR = {};
+      const cdfG = {};
+      const cdfB = {};
+      let cumR = 0, cumG = 0, cumB = 0;
+      
+      for (let i = 0; i < 256; i++) {
+        cumR += hist.r[i] || 0;
+        cumG += hist.g[i] || 0;
+        cumB += hist.b[i] || 0;
+        cdfR[i] = Math.round((cumR / count) * 255);
+        cdfG[i] = Math.round((cumG / count) * 255);
+        cdfB[i] = Math.round((cumB / count) * 255);
+      }
+      
+      // Apply equalization to tile
+      for (let y = ty; y < ty + tileH; y++) {
+        for (let x = tx; x < tx + tileW; x++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          
+          data[idx] = cdfR[r] || r;
+          data[idx + 1] = cdfG[g] || g;
+          data[idx + 2] = cdfB[b] || b;
+        }
+      }
+    }
   }
   
   return imageData;
@@ -240,12 +314,27 @@ function applyGaussianBlur(imageData) {
   const data = imageData.data;
   const width = GRID_SIZE;
   const height = GRID_SIZE;
-  const kernel = [
-    [1, 2, 1],
-    [2, 4, 2],
-    [1, 2, 1]
-  ];
-  const weight = 16;
+  
+  // Use different blur kernels based on grid size
+  let kernel, weight;
+  
+  if (GRID_SIZE <= 16) {
+    // Light blur for small grids
+    kernel = [
+      [1, 1, 1],
+      [1, 2, 1],
+      [1, 1, 1]
+    ];
+    weight = 10;
+  } else {
+    // Stronger blur for larger grids to preserve edges
+    kernel = [
+      [1, 2, 1],
+      [2, 4, 2],
+      [1, 2, 1]
+    ];
+    weight = 16;
+  }
   
   const output = new Uint8ClampedArray(data);
   
@@ -267,6 +356,82 @@ function applyGaussianBlur(imageData) {
       output[idx] = Math.round(r / weight);
       output[idx + 1] = Math.round(g / weight);
       output[idx + 2] = Math.round(b / weight);
+    }
+  }
+  
+  imageData.data.set(output);
+  return imageData;
+}
+
+function applySharpen(imageData) {
+  const data = imageData.data;
+  const width = GRID_SIZE;
+  const height = GRID_SIZE;
+  
+  const kernel = [
+    [0, -1, 0],
+    [-1, 5, -1],
+    [0, -1, 0]
+  ];
+  const weight = 1;
+  
+  const output = new Uint8ClampedArray(data);
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      let r = 0, g = 0, b = 0;
+      
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const idx = ((y + ky) * width + (x + kx)) * 4;
+          const kernelVal = kernel[ky + 1][kx + 1];
+          r += data[idx] * kernelVal;
+          g += data[idx + 1] * kernelVal;
+          b += data[idx + 2] * kernelVal;
+        }
+      }
+      
+      const idx = (y * width + x) * 4;
+      output[idx] = Math.max(0, Math.min(255, Math.round(r / weight)));
+      output[idx + 1] = Math.max(0, Math.min(255, Math.round(g / weight)));
+      output[idx + 2] = Math.max(0, Math.min(255, Math.round(b / weight)));
+    }
+  }
+  
+  imageData.data.set(output);
+  return imageData;
+}
+
+function applyMedianFilter(imageData) {
+  const data = imageData.data;
+  const width = GRID_SIZE;
+  const height = GRID_SIZE;
+  
+  const output = new Uint8ClampedArray(data);
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const rValues = [];
+      const gValues = [];
+      const bValues = [];
+      
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const idx = ((y + ky) * width + (x + kx)) * 4;
+          rValues.push(data[idx]);
+          gValues.push(data[idx + 1]);
+          bValues.push(data[idx + 2]);
+        }
+      }
+      
+      rValues.sort((a, b) => a - b);
+      gValues.sort((a, b) => a - b);
+      bValues.sort((a, b) => a - b);
+      
+      const idx = (y * width + x) * 4;
+      output[idx] = rValues[4];
+      output[idx + 1] = gValues[4];
+      output[idx + 2] = bValues[4];
     }
   }
   
@@ -305,10 +470,20 @@ function renderPattern(image) {
     GRID_SIZE
   );
 
-  // Apply contrast enhancement to improve detail
+  // Multi-stage image processing pipeline for better quality
+  // 1. Enhance contrast using per-channel stretching
   imageData = enhanceContrast(imageData);
   
-  // Apply Gaussian blur for smoother transitions
+  // 2. Adaptive histogram equalization for detail preservation
+  imageData = applyAdaptiveHistogramEqualization(imageData);
+  
+  // 3. Median filter to reduce noise while preserving edges
+  imageData = applyMedianFilter(imageData);
+  
+  // 4. Sharpen edges for better definition
+  imageData = applySharpen(imageData);
+  
+  // 5. Gaussian blur for smooth color transitions
   imageData = applyGaussianBlur(imageData);
   
   // Put processed image back
@@ -383,7 +558,7 @@ imageInput.addEventListener("change", (event) => {
 
 downloadButton.addEventListener("click", () => {
   const link = document.createElement("a");
-  link.download = "bead-pattern-18x18.png";
+  link.download = `bead-pattern-${GRID_SIZE}x${GRID_SIZE}.png`;
   link.href = patternCanvas.toDataURL("image/png");
   link.click();
 });

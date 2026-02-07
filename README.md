@@ -1,13 +1,13 @@
 # Bead Pattern Builder
 
-A lightweight, static website that converts any uploaded image into an 18×18 bead pattern using a simplified color palette.
+A lightweight, static website that converts any uploaded image into a customizable bead pattern (10×10 to 40×40 grid) using a simplified color palette.
 
 ## Live preview
 [https://mathiasguille.github.io/bead-pattern](https://mathiasguille.github.io/bead-pattern)
 
 ## How it works
 - Upload an image (JPEG, PNG, etc.).
-- The image is center-cropped and reduced to an 18×18 pixel grid.
+- The image is center-cropped and reduced to your chosen grid size (default 18×18).
 - Choose a color palette: **Basic**, **Pastel**, or **Bright**.
 - Each pixel is mapped to the nearest color in your selected palette.
 - The resulting grid is rendered as a bead design and can be downloaded as a PNG.
@@ -68,7 +68,7 @@ Test coverage includes 16 test cases across edge cases, validation, and real-wor
 
 ## Tips for Best Results
 - **Use simple, high-contrast images** – logos, silhouettes, and drawings work best
-- **Avoid photorealistic images** – they lose detail at 18×18 resolution
+- **Avoid photorealistic images at small sizes** – use 24×24 or larger for photos
 - **Bold outlines** create sharper patterns; fine details may disappear
 - **Try converting to grayscale first** if your image is cluttered
 - **Pastel palette** works best for softer, more blended designs
