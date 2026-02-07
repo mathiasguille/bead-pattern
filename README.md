@@ -2,6 +2,9 @@
 
 A lightweight, static website that converts any uploaded image into an 18×18 bead pattern using a simplified color palette.
 
+## Live preview
+[https://mathiasguille.github.io/bead-pattern](https://mathiasguille.github.io/bead-pattern)
+
 ## How it works
 - Upload an image (JPEG, PNG, etc.).
 - The image is center-cropped and reduced to an 18×18 pixel grid.

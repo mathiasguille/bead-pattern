@@ -9,32 +9,67 @@
   <body>
     <main class="page">
       <header class="hero">
+        <span class="eyebrow">Bead art made easy</span>
         <h1>Bead Pattern Builder</h1>
         <p>
           Upload an image and turn it into an 18×18 bead design with a simple
-          color palette.
+          color palette that is ready for crafting or printing.
         </p>
       </header>
 
       <section class="controls">
-        <label class="upload">
-          <span>Choose an image</span>
-          <input type="file" id="imageInput" accept="image/*" />
-        </label>
-        <button id="downloadButton" type="button" disabled>
-          Download pattern
-        </button>
+        <div class="control-card">
+          <div>
+            <h2>Upload your source image</h2>
+            <p>Best results come from high-contrast photos or simple shapes.</p>
+          </div>
+          <div class="control-actions">
+            <label class="upload">
+              <span>Choose an image</span>
+              <input type="file" id="imageInput" accept="image/*" />
+            </label>
+            <button id="downloadButton" type="button" disabled>
+              Download pattern
+            </button>
+          </div>
+        </div>
       </section>
 
       <section class="workspace">
         <div class="canvas-wrapper">
           <h2>Bead Grid Preview</h2>
+          <p class="helper-text">
+            The grid below is always 18×18 beads. Upload a photo to get started.
+          </p>
           <canvas id="patternCanvas" width="360" height="360"></canvas>
         </div>
         <aside class="legend">
           <h2>Palette</h2>
           <ul id="paletteList"></ul>
         </aside>
+      </section>
+
+      <section class="steps">
+        <article>
+          <h3>1. Pick your image</h3>
+          <p>
+            Upload a PNG or JPG. The tool center-crops it to capture the main
+            subject.
+          </p>
+        </article>
+        <article>
+          <h3>2. Preview the 18×18 grid</h3>
+          <p>
+            Each bead is color-matched to the basic palette for a clean,
+            consistent pattern.
+          </p>
+        </article>
+        <article>
+          <h3>3. Download and craft</h3>
+          <p>
+            Save the PNG output for printing, sharing, or tracing with beads.
+          </p>
+        </article>
       </section>
 
       <section class="tips">

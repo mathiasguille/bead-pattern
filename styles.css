@@ -25,9 +25,24 @@ body {
   gap: 32px;
 }
 
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e2e2f2;
+  color: #3f3f5f;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+  box-shadow: 0 6px 16px rgba(30, 30, 47, 0.08);
+}
+
 .hero h1 {
-  margin: 0 0 12px;
-  font-size: 2.5rem;
+  margin: 16px 0 12px;
+  font-size: 2.6rem;
 }
 
 .hero p {
@@ -39,8 +54,36 @@ body {
 
 .controls {
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.control-card {
+  display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 16px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #d6d6e7;
+  box-shadow: 0 8px 20px rgba(30, 30, 47, 0.08);
+}
+
+.control-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.control-card p {
+  margin: 0;
+  color: #4a4a68;
+}
+
+.control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
 }
 
@@ -50,11 +93,10 @@ body {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: #ffffff;
+  background: #f7f7fb;
   border: 1px solid #d6d6e7;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(30, 30, 47, 0.08);
 }
 
 .upload input {
@@ -102,6 +144,12 @@ button:not(:disabled):hover {
   font-size: 1.2rem;
 }
 
+.helper-text {
+  margin: -8px 0 16px;
+  color: #5a5a74;
+  font-size: 0.95rem;
+}
+
 #patternCanvas {
   width: 100%;
   max-width: 520px;
@@ -144,6 +192,30 @@ button:not(:disabled):hover {
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.steps article {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid #e0e0f0;
+  box-shadow: 0 10px 22px rgba(30, 30, 47, 0.06);
+}
+
+.steps h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.steps p {
+  margin: 0;
+  color: #4a4a68;
+}
+
 .tips {
   background: #fff8e1;
   border-radius: 16px;
@@ -158,5 +230,10 @@ button:not(:disabled):hover {
 @media (max-width: 840px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .control-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
