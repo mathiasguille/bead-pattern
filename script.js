@@ -153,6 +153,20 @@ let cropBox = {
 /** Original image dimensions (for bounds checking) */
 let sourceImageDimensions = { width: 0, height: 0 };
 
+/**
+ * Initialize crop tool UI state.
+ * Disables crop controls until an image is uploaded.
+ */
+function initializeCropUI() {
+  cropModeCheckbox.disabled = true;
+  cropModeCheckbox.checked = false;
+  cropStatus.textContent = "💡 Upload an image to enable crop tool";
+  updateCropModeUI();
+}
+
+// Initialize crop UI on page load
+initializeCropUI();
+
 // ============================================================================
 // Rendering & Display Functions
 // ============================================================================
@@ -798,8 +812,7 @@ imageInput.addEventListener("change", (event) => {
   image.onload = () => {
     CURRENT_IMAGE = image;
     
-    // Initialize crop tool
-    cropControlCard.style.display = "block";
+    // Initialize crop tool (card is always visible, now enable controls)
     sourceImageDimensions.width = image.width;
     sourceImageDimensions.height = image.height;
     
@@ -814,6 +827,9 @@ imageInput.addEventListener("change", (event) => {
     cropXSlider.max = image.width;
     cropYSlider.max = image.height;
     cropSizeSlider.max = Math.min(image.width, image.height);
+    
+    // Enable crop controls
+    cropModeCheckbox.disabled = false;
     
     // Update crop status and UI
     cropStatus.textContent = `📷 Image loaded: ${image.width}×${image.height}px. Crop tool ready!`;
