@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <!-- 
-      Bead Pattern Builder - HTML Structure
+      Bead Pattern Builder - Landing Page & App
       
       Converts uploaded images into customizable bead patterns.
       Supports multiple color palettes, adjustable grid sizes (10×10 to 40×40),
@@ -12,28 +12,122 @@
       - Image upload and preview
       - Palette selection (Basic, Pastel, Bright)
       - Adjustable grid size (10-40)
+      - Interactive crop tool
       - Grid labels toggle
-      - Bead count summary
-      - PNG export
+      - Bead count summary for shopping
+      - PNG export ready for printing
     -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bead Pattern Builder</title>
+    <meta name="description" content="Transform any photo into a custom bead pattern. Free online bead pattern designer with multiple palettes, customizable grid sizes, and instant PNG export." />
+    <meta name="keywords" content="bead pattern, bead art, beading, craft design, DIY beads" />
+    <title>Bead Pattern Builder - Turn Photos Into Bead Designs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="page">
-      <header class="hero">
-        <span class="eyebrow">Bead art made easy</span>
-        <h1>Bead Pattern Builder</h1>
-        <p>
-          Upload an image and turn it into a bead design (10×10 to 40×40 grid) with your
-          choice of color palette, ready for crafting or printing.
-        </p>
-      </header>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="navbar-container">
+        <div class="navbar-brand">🧿 Bead Pattern Builder</div>
+        <div class="navbar-links">
+          <a href="#app">Create Pattern</a>
+          <a href="#showcase">Gallery</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
+    </nav>
 
-      <!-- Main Control Panels -->
-      <section class="controls">
+    <main class="page">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1>Turn Your Photos Into Beautiful Bead Patterns</h1>
+          <p class="hero-subtitle">Create custom bead designs from any image. No experience needed. Free and instant.</p>
+          <div class="hero-cta">
+            <button class="btn-primary" onclick="document.getElementById('imageInput').click()">
+              Start Creating Now
+            </button>
+            <a href="#how-it-works" class="btn-secondary">Learn How</a>
+          </div>
+          <div class="hero-features">
+            <div class="feature-badge">✨ 10+ Color Palettes</div>
+            <div class="feature-badge">⚡ Instant Results</div>
+            <div class="feature-badge">🖼️ Print Ready</div>
+          </div>
+        </div>
+        <div class="hero-image">
+          <div class="hero-preview">
+            <div class="preview-grid">Sample Pattern</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Showcase Gallery -->
+      <section class="showcase" id="showcase">
+        <div class="section-header">
+          <h2>What You Can Create</h2>
+          <p>Browse stunning examples made by our community</p>
+        </div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <div class="gallery-placeholder">🐱</div>
+            <p>Pet Portraits</p>
+          </div>
+          <div class="gallery-item">
+            <div class="gallery-placeholder">👨‍👩‍👧‍👦</div>
+            <p>Family Photos</p>
+          </div>
+          <div class="gallery-item">
+            <div class="gallery-placeholder">🌅</div>
+            <p>Landscapes</p>
+          </div>
+          <div class="gallery-item">
+            <div class="gallery-placeholder">🎨</div>
+            <p>Artwork</p>
+          </div>
+          <div class="gallery-item">
+            <div class="gallery-placeholder">❤️</div>
+            <p>Logos & Text</p>
+          </div>
+          <div class="gallery-item">
+            <div class="gallery-placeholder">✨</div>
+            <p>Custom Designs</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="how-it-works" id="how-it-works">
+        <div class="section-header">
+          <h2>How It Works</h2>
+          <p>3 simple steps to your first bead pattern</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Upload Your Image</h3>
+            <p>Choose any photo, logo, or artwork from your device. Works with JPEG, PNG, and more.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>Customize Your Design</h3>
+            <p>Pick your grid size (10×10 to 40×40), choose color palettes, and use the crop tool to focus on details.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Download & Build</h3>
+            <p>Get your pattern as a printable PNG with an exact bead count. Perfect for shopping and assembly.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- App Container -->
+      <section class="app-section" id="app">
+        <div class="section-header">
+          <h2>Create Your Pattern</h2>
+          <p>Use the tool below to design your bead pattern</p>
+        </div>
         <!-- Image Upload Panel -->
         <div class="control-card">
           <div>
@@ -63,6 +157,14 @@
             <div class="form-group checkbox">
               <input type="checkbox" id="cropModeCheckbox" />
               <label for="cropModeCheckbox">Enable manual crop (uses auto center-crop if disabled)</label>
+            </div>
+
+            <!-- Crop Preview Canvas (shown when crop mode enabled) -->
+            <div id="cropPreviewContainer" style="display: none; flex-direction: column; gap: 8px; align-items: center;">
+              <p style="margin: 0; font-size: 0.9rem; color: #4a4a68;">Drag to move • Use sliders to adjust</p>
+              <div style="position: relative; width: 100%; max-width: 300px; aspect-ratio: 1; background: #f0f0f7; border-radius: 8px; overflow: hidden; border: 2px solid #d6d6e7;">
+                <canvas id="cropPreviewCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+              </div>
             </div>
 
             <!-- Crop Sliders (shown when crop mode enabled) -->
@@ -212,14 +314,108 @@
         </article>
       </section>
 
-      <section class="tips">
-        <h2>Tips</h2>
-        <ul>
-          <li>Simple shapes and high-contrast images work best.</li>
-          <li>Adjust grid size from 10×10 to 40×40 based on your project scope.</li>
-          <li>Download the pattern for printing or sharing.</li>
-        </ul>
+      <!-- Affiliate & Resources Section -->
+      <section class="resources" id="faq">
+        <div class="section-header">
+          <h2>Everything You Need</h2>
+          <p>Shopping guide and premium bead suppliers</p>
+        </div>
+        <div class="resources-grid">
+          <div class="resource-card">
+            <h3>🛒 Where to Buy Beads</h3>
+            <p>Shop curated selection of quality beads from trusted suppliers:</p>
+            <ul>
+              <li><a href="#" class="affiliate-link">Artbeads.com - Large Selection</a></li>
+              <li><a href="#" class="affiliate-link">Fire Mountain Gems - Bulk Deals</a></li>
+              <li><a href="#" class="affiliate-link">Michaels - Local Pickup</a></li>
+            </ul>
+          </div>
+          <div class="resource-card">
+            <h3>📚 Beading Guides</h3>
+            <p>Learn the best practices and techniques:</p>
+            <ul>
+              <li><a href="#">Grid Size & Time Estimates</a></li>
+              <li><a href="#">Color Palette Tips</a></li>
+              <li><a href="#">Assembly Best Practices</a></li>
+            </ul>
+          </div>
+          <div class="resource-card">
+            <h3>🎁 Premium Tools</h3>
+            <p>Upgrade your beading experience:</p>
+            <ul>
+              <li><a href="#" class="affiliate-link">Bead Sorting Trays</a></li>
+              <li><a href="#" class="affiliate-link">Professional Beading Needles</a></li>
+              <li><a href="#" class="affiliate-link">Pattern Printing Supplies</a></li>
+            </ul>
+          </div>
+        </div>
       </section>
+
+      <!-- FAQ Section -->
+      <section class="faq-section">
+        <div class="section-header">
+          <h2>Frequently Asked Questions</h2>
+        </div>
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h4>How long does it take to build a pattern?</h4>
+            <p>A 18×18 pattern (324 beads) typically takes 2-3 hours for beginners. Larger patterns (32×32, 40×40) can take 8-12+ hours for photorealistic results.</p>
+          </div>
+          <div class="faq-item">
+            <h4>What image types work best?</h4>
+            <p>High-contrast images, logos, silhouettes, and drawings work best. Photos with soft gradients may lose detail at smaller grid sizes (use 24×24 or larger).</p>
+          </div>
+          <div class="faq-item">
+            <h4>Can I use any color bead?</h4>
+            <p>Yes! Our tool includes Basic (11 colors), Pastel, and Bright palettes. You can adapt the pattern to beads you already have on hand.</p>
+          </div>
+          <div class="faq-item">
+            <h4>Is there a limit to image size?</h4>
+            <p>No limit! We process images of any size. The grid dimensions determine the final detail level, not the source image resolution.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h4>About</h4>
+            <p>Bead Pattern Builder transforms your photos into beautiful custom bead designs. Start creating today—free and no registration required.</p>
+          </div>
+          <div class="footer-section">
+            <h4>Quick Links</h4>
+            <ul>
+              <li><a href="#app">Create Pattern</a></li>
+              <li><a href="#how-it-works">How It Works</a></li>
+              <li><a href="#showcase">Gallery</a></li>
+              <li><a href="#">Privacy Policy</a></li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">Beading Tips</a></li>
+              <li><a href="#">Color Guide</a></li>
+              <li><a href="#">Pattern Library</a></li>
+              <li><a href="#">Support</a></li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4>Connect</h4>
+            <ul>
+              <li><a href="#">Twitter</a></li>
+              <li><a href="#">Pinterest</a></li>
+              <li><a href="#">Instagram</a></li>
+              <li><a href="#">Email Newsletter</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2026 Bead Pattern Builder. Created with 🧿 for bead artists everywhere.</p>
+          <p style="font-size: 0.85rem; color: #999;">We may earn affiliate commissions on recommended products.</p>
+        </div>
+      </footer>
     </main>
 
     <script src="script.js"></script>
