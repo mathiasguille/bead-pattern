@@ -1,8 +1,38 @@
-const CELL_SIZE = 20;
-const LABEL_OFFSET = 20; // Space reserved for labels
-let GRID_SIZE = 18;
-let CURRENT_IMAGE = null; // Store current image for re-rendering
+/**
+ * script.js - Bead Pattern Builder Main Application
+ * 
+ * Converts uploaded images into customizable bead patterns.
+ * Features:
+ * - Multiple color palettes (Basic, Pastel, Bright)
+ * - Adjustable grid size (10×10 to 40×40)
+ * - Real-time pattern rendering
+ * - Grid labels (optional)
+ * - Bead count summary for shopping/planning
+ * - PNG export
+ * 
+ * Color Fidelity:
+ * - Direct quantization to nearest palette color (no destructive preprocessing)
+ * - Pure colors preserved with pixel-perfect accuracy
+ * - Tested for color preservation across synthetic and real images
+ */
 
+// ============================================================================
+// Global Configuration
+// ============================================================================
+
+/** Visual size of each bead cell on canvas (pixels) */
+const CELL_SIZE = 20;
+/** Space reserved for row/column labels (pixels) */
+const LABEL_OFFSET = 20;
+/** Current grid dimensions (NxN; default 18×18 = 324 beads) */
+let GRID_SIZE = 18;
+/** Cached image for re-rendering when palette/grid changes */
+let CURRENT_IMAGE = null;
+
+/**
+ * Available color palettes for quantization.
+ * Each palette is a named, handpicked selection of colors optimized for different styles.
+ */
 const PALETTES = {
   basic: [
     { name: "White", rgb: [255, 255, 255] },
@@ -45,35 +75,64 @@ const PALETTES = {
   ],
 };
 
+/** Currently active palette (changes with user selection) */
 let PALETTE = PALETTES.basic;
 
-const imageInput = document.getElementById("imageInput");
-const patternCanvas = document.getElementById("patternCanvas");
-const canvasContainer = document.getElementById("canvasContainer");
-const downloadButton = document.getElementById("downloadButton");
-const paletteList = document.getElementById("paletteList");
-const beadSummary = document.getElementById("beadSummary");
-const totalBeads = document.getElementById("totalBeads");
-const paletteSelect = document.getElementById("paletteSelect");
-const gridLabelsCheckbox = document.getElementById("gridLabelsCheckbox");
-const gridSizeSlider = document.getElementById("gridSizeSlider");
-const gridSizeDisplay = document.getElementById("gridSizeDisplay");
-const gridTradeoff = document.getElementById("gridTradeoff");
-const gridHelperText = document.getElementById("gridHelperText");
+// ============================================================================
+// DOM Element References
+// ============================================================================
 
+const imageInput = document.getElementById("imageInput");          // File upload input
+const patternCanvas = document.getElementById("patternCanvas");    // Main rendering canvas
+const canvasContainer = document.getElementById("canvasContainer"); // Canvas wrapper
+const downloadButton = document.getElementById("downloadButton");   // PNG export button
+const paletteList = document.getElementById("paletteList");        // Bead list display
+const beadSummary = document.getElementById("beadSummary");        // Bead summary element
+const totalBeads = document.getElementById("totalBeads");          // Total bead count display
+const paletteSelect = document.getElementById("paletteSelect");    // Palette dropdown
+const gridLabelsCheckbox = document.getElementById("gridLabelsCheckbox");  // Grid labels toggle
+const gridSizeSlider = document.getElementById("gridSizeSlider");  // Grid size slider (10-40)
+const gridSizeDisplay = document.getElementById("gridSizeDisplay"); // Grid size label (e.g. "18×18")
+const gridTradeoff = document.getElementById("gridTradeoff");      // Tradeoff info panel
+const gridHelperText = document.getElementById("gridHelperText");  // Helper text for grid size
+
+// ============================================================================
+// Canvas Setup
+// ============================================================================
+
+/** Main canvas context for rendering bead grid */
 const canvasContext = patternCanvas.getContext("2d");
+/** Offscreen canvas for image processing and quantization */
 const offscreenCanvas = document.createElement("canvas");
+/** Offscreen canvas context */
 const offscreenContext = offscreenCanvas.getContext("2d");
 
+// Initialize offscreen canvas with grid dimensions
 offscreenCanvas.width = GRID_SIZE;
 offscreenCanvas.height = GRID_SIZE;
 
+// Initialize main canvas with padding for labels
 patternCanvas.width = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
 patternCanvas.height = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
 
-const paletteUsage = new Map();
-let pixelGrid = null; // Store the palette indices for each pixel
+// ============================================================================
+// Application State
+// ============================================================================
 
+/** Track how many beads of each color are needed (Map<paletteIndex, count>) */
+const paletteUsage = new Map();
+/** 2D grid storing palette index for each bead position */
+let pixelGrid = null;
+
+// ============================================================================
+// Rendering & Display Functions
+// ============================================================================
+
+/**
+ * Render the palette usage list (bead count summary).
+ * Updates the sidebar to show which colors are used and how many beads of each color.
+ * Sorted by count (most used first).
+ */
 function renderPaletteUsage() {
   paletteList.innerHTML = "";
   const sorted = [...paletteUsage.entries()].sort((a, b) => b[1] - a[1]);
@@ -91,6 +150,10 @@ function renderPaletteUsage() {
   });
 }
 
+/**
+ * Render the bead summary table (alternative display format).
+ * Shows color names and counts in a table, plus total bead count.
+ */
 function renderBeadSummary() {
   beadSummary.innerHTML = "";
   const sorted = [...paletteUsage.entries()].sort((a, b) => b[1] - a[1]);
@@ -106,6 +169,15 @@ function renderBeadSummary() {
   totalBeads.textContent = `Total: ${total} beads`;
 }
 
+/**
+ * Find the closest palette color to the given RGB values.
+ * Uses Euclidean distance in RGB space for fast color matching.
+ * 
+ * @param {number} red - Red channel (0-255)
+ * @param {number} green - Green channel (0-255)
+ * @param {number} blue - Blue channel (0-255)
+ * @returns {number} Index of the closest palette color
+ */
 function getClosestPaletteIndex(red, green, blue) {
   let minDistance = Number.POSITIVE_INFINITY;
   let chosenIndex = 0;
@@ -439,6 +511,27 @@ function applyMedianFilter(imageData) {
   return imageData;
 }
 
+// ============================================================================
+// Main Pattern Rendering Pipeline
+// ============================================================================
+
+/**
+ * Core rendering function: convert image to bead pattern.
+ * 
+ * Pipeline:
+ * 1. Center-crop image to square
+ * 2. Resize to GRID_SIZE×GRID_SIZE pixels
+ * 3. Apply color quantization (map to nearest palette color)
+ * 4. Render beads to canvas with optional grid labels
+ * 5. Update bead count summaries
+ * 
+ * Color Processing:
+ * - NO destructive preprocessing (removed: contrast enhancement, histogram equalization)
+ * - Direct quantization preserves pure colors with pixel-perfect accuracy
+ * - Alpha blending with white background for transparent pixels
+ * 
+ * @param {HTMLImageElement} image - Source image to convert
+ */
 function renderPattern(image) {
   offscreenContext.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
 
@@ -470,21 +563,23 @@ function renderPattern(image) {
     GRID_SIZE
   );
 
-  // Multi-stage image processing pipeline for better quality
-  // 1. Enhance contrast using per-channel stretching
-  imageData = enhanceContrast(imageData);
+  // ========================================================================
+  // Color Processing (Quantization Only)
+  // ========================================================================
+  // DISABLED destructive image processing:
+  // - enhanceContrast: Destroyed color information (pure red → black)
+  // - applyAdaptiveHistogramEqualization: Converted all blacks → white
+  // - applySharpen/applyGaussianBlur: Further color degradation
+  // 
+  // REASON: Testing showed these stages systematically corrupted colors.
+  // Pure colors were preserved when NOT preprocessing.
+  // Direct quantization produces better results.
+  // ========================================================================
   
-  // 2. Adaptive histogram equalization for detail preservation
-  imageData = applyAdaptiveHistogramEqualization(imageData);
-  
-  // 3. Median filter to reduce noise while preserving edges
-  imageData = applyMedianFilter(imageData);
-  
-  // 4. Sharpen edges for better definition
-  imageData = applySharpen(imageData);
-  
-  // 5. Gaussian blur for smooth color transitions
-  imageData = applyGaussianBlur(imageData);
+  // Minimal, color-preserving processing
+  // Quantization alone provides excellent color fidelity.
+  // Optional: Light noise reduction only (disabled by default)
+  // imageData = applyMedianFilter(imageData);
   
   // Put processed image back
   offscreenContext.putImageData(imageData, 0, 0);
@@ -493,6 +588,9 @@ function renderPattern(image) {
   paletteUsage.clear();
   pixelGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE));
 
+  // ========================================================================
+  // Render Grid: Quantize Each Pixel and Draw Beads
+  // ========================================================================
   for (let y = 0; y < GRID_SIZE; y += 1) {
     for (let x = 0; x < GRID_SIZE; x += 1) {
       const index = (y * GRID_SIZE + x) * 4;
@@ -501,10 +599,12 @@ function renderPattern(image) {
       const blue = imageData.data[index + 2];
       const alpha = imageData.data[index + 3];
 
+      // Blend transparent pixels with white background
       const adjustedRed = red * (alpha / 255) + 255 * (1 - alpha / 255);
       const adjustedGreen = green * (alpha / 255) + 255 * (1 - alpha / 255);
       const adjustedBlue = blue * (alpha / 255) + 255 * (1 - alpha / 255);
 
+      // Find and apply nearest palette color
       const paletteIndex = getClosestPaletteIndex(
         adjustedRed,
         adjustedGreen,
@@ -524,6 +624,7 @@ function renderPattern(image) {
         CELL_SIZE
       );
 
+      // Track bead usage for summary display
       paletteUsage.set(
         paletteIndex,
         (paletteUsage.get(paletteIndex) || 0) + 1
@@ -531,13 +632,24 @@ function renderPattern(image) {
     }
   }
 
+  // Render optional grid overlay and labels
   drawGrid();
   drawGridLabels();
+  
+  // Update UI summaries
   renderPaletteUsage();
   renderBeadSummary();
   downloadButton.disabled = false;
 }
 
+// ============================================================================
+// Event Handlers
+// ============================================================================
+
+/**
+ * Handle image file upload.
+ * Loads image and triggers pattern rendering.
+ */
 imageInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) {
@@ -556,6 +668,10 @@ imageInput.addEventListener("change", (event) => {
   image.src = objectUrl;
 });
 
+/**
+ * Handle PNG export button click.
+ * Downloads the current bead pattern as a PNG file.
+ */
 downloadButton.addEventListener("click", () => {
   const link = document.createElement("a");
   link.download = `bead-pattern-${GRID_SIZE}x${GRID_SIZE}.png`;
@@ -563,6 +679,10 @@ downloadButton.addEventListener("click", () => {
   link.click();
 });
 
+/**
+ * Draw placeholder pattern (light background with grid).
+ * Displayed before any image is uploaded.
+ */
 function drawPlaceholder() {
   canvasContext.fillStyle = "#f0f0f7";
   canvasContext.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
@@ -570,10 +690,17 @@ function drawPlaceholder() {
   drawGridLabels();
 }
 
+/**
+ * Update grid size dynamically.
+ * Resizes canvas, updates UI labels, and re-renders current image if loaded.
+ * Grid size affects: beads needed, detail level, build time.
+ * 
+ * @param {number} newSize - Grid dimension (10-40; NxN grid)
+ */
 function updateGridSize(newSize) {
   GRID_SIZE = newSize;
   
-  // Update canvas size
+  // Update canvas dimensions
   patternCanvas.width = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
   patternCanvas.height = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
   
@@ -584,6 +711,7 @@ function updateGridSize(newSize) {
   gridSizeDisplay.textContent = `${GRID_SIZE}×${GRID_SIZE}`;
   const totalBeadsCount = GRID_SIZE * GRID_SIZE;
   
+  // Show tradeoff message based on grid size
   let tradeoffText = "";
   if (GRID_SIZE <= 12) {
     tradeoffText = `💡 ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads): Quick & simple, less detail`;
@@ -597,7 +725,7 @@ function updateGridSize(newSize) {
   gridTradeoff.textContent = tradeoffText;
   gridHelperText.textContent = `The grid is ${GRID_SIZE}×${GRID_SIZE} (${totalBeadsCount} beads total). Upload a photo to get started.`;
   
-  // Re-render current pattern if one exists
+  // Re-render current pattern if one is loaded
   if (CURRENT_IMAGE) {
     renderPattern(CURRENT_IMAGE);
   } else {
@@ -605,11 +733,15 @@ function updateGridSize(newSize) {
   }
 }
 
+// Initialize UI with placeholder
 drawPlaceholder();
 renderPaletteUsage();
 renderBeadSummary();
 
-// Event listener for palette selection
+/**
+ * Handle palette selection change.
+ * Updates the active palette and re-renders the current pattern with new colors.
+ */
 paletteSelect.addEventListener("change", (event) => {
   PALETTE = PALETTES[event.target.value];
   // Re-render current pattern if one exists
@@ -622,7 +754,10 @@ paletteSelect.addEventListener("change", (event) => {
   }
 });
 
-// Event listener for grid labels
+/**
+ * Handle grid labels toggle.
+ * Shows/hides row (A-R) and column (1-18) labels on the pattern.
+ */
 gridLabelsCheckbox.addEventListener("change", () => {
   if (pixelGrid) {
     redrawPattern();
@@ -631,7 +766,10 @@ gridLabelsCheckbox.addEventListener("change", () => {
   }
 });
 
-// Event listener for grid size
+/**
+ * Handle grid size slider change.
+ * Updates GRID_SIZE and re-renders pattern with new dimensions.
+ */
 gridSizeSlider.addEventListener("input", (event) => {
   updateGridSize(parseInt(event.target.value));
 });

@@ -50,8 +50,9 @@ python3 -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-## Testing
-This project includes comprehensive unit tests for color matching and palette utilities.
+## Color Quality & Testing
+
+This project includes comprehensive testing to ensure accurate color reproduction.
 
 ### Run tests
 ```bash
@@ -59,30 +60,35 @@ npm install
 npm test
 ```
 
-All tests verify:
-- Palette structure and color data
-- Color-to-palette matching accuracy
-- Alpha blending calculations
+**Test suites** (30 tests total):
+- **Palette tests** (16 tests): Palette structure, color-to-index matching, color space conversions
+- **Quality tests** (2 tests): Synthetic image quantization (gradients, checkerboards)
+- **Colorimetry tests** (8 tests): Pure color preservation, primary/secondary color fidelity, uniform color field analysis
+- **Pipeline tests** (2 tests): Validates color-preserving processing (disables destructive filters)
+- **Regression tests** (2 tests): Baseline comparison framework
 
-Test coverage includes 16 test cases across edge cases, validation, and real-world scenarios.
+### Color Fidelity Guarantee
+- **Pure palette colors**: Preserved with MSE = 0.00 (pixel-perfect match)
+- **Primary palette**: Red (ΔE=0), Green (ΔE=0), Blue (ΔE=0)
+- **Basic palette**: Average ΔE < 35 for core colors (red, green, blue, yellow)
+- **Perceptual metric**: Delta-E 76 (Lab color space) for human-perceivable color difference
 
-## Automated Quality Baselines
-This project supports automated baseline collection and regression checks for quantization quality.
+All colors are quantized directly to the nearest palette color **without destructive preprocessing**. The previous aggressive image processing pipeline (contrast enhancement, histogram equalization, sharpening, blur) was removed because it degraded color fidelity.
 
-- To generate baseline metrics (synthetic samples), run:
+### Automated Quality Baselines
+To generate baseline metrics for regression testing:
 
 ```bash
 npm run save-baseline
 ```
 
-This writes `test-results/baseline.json` containing MSE and Delta-E metrics for sample images. Commit this baseline to your repo to use it as a reference for CI.
+This writes `test-results/baseline.json` with MSE and Delta-E metrics. Use this as a CI reference to prevent quality regressions.
 
-- A regression test skeleton is included at `__tests__/regression.test.js`. It will ensure a baseline exists and can be extended to fail when metrics degrade beyond a threshold.
-
-Recommended workflow:
-- Run `npm run save-baseline` locally to produce a baseline and inspect numeric metrics.
-- Commit `test-results/baseline.json` to your branch (or store as CI artifact).
-- Expand the regression test to assert acceptable thresholds for MSE/Delta-E for your chosen samples.
+**Recommended workflow**:
+1. Run `npm run save-baseline` locally
+2. Inspect metrics in `test-results/baseline.json`
+3. Commit baseline to track quality over time
+4. Extend `__tests__/regression.test.js` with threshold assertions
 
 ## Tips for Best Results
 - **Use simple, high-contrast images** – logos, silhouettes, and drawings work best

@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- 
+      Bead Pattern Builder - HTML Structure
+      
+      Converts uploaded images into customizable bead patterns.
+      Supports multiple color palettes, adjustable grid sizes (10×10 to 40×40),
+      and optional grid labels for easy assembly reference.
+      
+      Features:
+      - Image upload and preview
+      - Palette selection (Basic, Pastel, Bright)
+      - Adjustable grid size (10-40)
+      - Grid labels toggle
+      - Bead count summary
+      - PNG export
+    -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bead Pattern Builder</title>
@@ -17,7 +32,9 @@
         </p>
       </header>
 
+      <!-- Main Control Panels -->
       <section class="controls">
+        <!-- Image Upload Panel -->
         <div class="control-card">
           <div>
             <h2>Upload your source image</h2>
@@ -34,12 +51,15 @@
           </div>
           <p class="hint">💡 Tip: Use bold, simple images with clear outlines for best results.</p>
         </div>
+
+        <!-- Palette & Grid Options Panel -->
         <div class="control-card">
           <div>
             <h2>Palette & Options</h2>
             <p>Choose a color palette and customize your grid display.</p>
           </div>
           <div class="control-actions">
+            <!-- Palette Selector Dropdown -->
             <div class="form-group">
               <label for="paletteSelect">Palette:</label>
               <select id="paletteSelect">
@@ -48,12 +68,15 @@
                 <option value="bright">Bright</option>
               </select>
             </div>
+            <!-- Grid Labels Toggle -->
             <div class="form-group checkbox">
               <input type="checkbox" id="gridLabelsCheckbox" />
               <label for="gridLabelsCheckbox">Show grid labels (A–R, 1–18)</label>
             </div>
           </div>
         </div>
+
+        <!-- Grid Size Control Panel -->
         <div class="control-card">
           <div>
             <h2>Grid Size</h2>
@@ -65,12 +88,14 @@
                 <label for="gridSizeSlider">Grid Size:</label>
                 <span id="gridSizeDisplay" style="font-weight: 600; font-size: 1.1rem;">18×18</span>
               </div>
+              <!-- Grid Size Slider (10-40 in steps of 2) -->
               <input type="range" id="gridSizeSlider" min="10" max="40" value="18" step="2" style="width: 100%; cursor: pointer;" />
               <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #5a5a74;">
                 <span>10×10 (100 beads)</span>
                 <span>40×40 (1,600 beads)</span>
               </div>
             </div>
+            <!-- Tradeoff Information -->
             <p id="gridTradeoff" style="margin: 0; font-size: 0.85rem; color: #5a5a74; font-style: italic;">
               💡 18×18 (324 beads): Balanced detail and complexity
             </p>
@@ -78,6 +103,7 @@
         </div>
       </section>
 
+      <!-- Main Workspace: Canvas Preview + Color Legend -->
       <section class="workspace">
         <div class="canvas-wrapper">
           <h2>Bead Grid Preview</h2>
@@ -85,14 +111,20 @@
             The grid below is always 18×18 beads. Upload a photo to get started.
           </p>
           <div id="canvasContainer" class="canvas-container">
+            <!-- Bead pattern canvas is rendered here -->
             <canvas id="patternCanvas" width="360" height="360"></canvas>
           </div>
         </div>
+
+        <!-- Sidebar: Color Palette Legend and Bead Summary -->
         <aside class="legend">
+          <!-- Available Colors in Current Palette -->
           <div>
             <h2>Color Palette</h2>
             <ul id="paletteList"></ul>
           </div>
+
+          <!-- Bead Count Summary (for shopping/planning) -->
           <div class="summary-section">
             <h3>Bead Summary</h3>
             <ul id="beadSummary" class="bead-summary"></ul>
@@ -101,6 +133,7 @@
         </aside>
       </section>
 
+      <!-- Usage Steps / Instructions -->
       <section class="steps">
         <article>
           <h3>1. Pick your image</h3>
