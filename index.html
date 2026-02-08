@@ -150,7 +150,7 @@
         <div class="control-card" id="cropControlCard">
           <div>
             <h2>Crop Tool</h2>
-            <p>Manually select which part of the image to use (optional).</p>
+            <p>Click and drag directly on your image to select which part you want to keep.</p>
           </div>
           <div class="control-actions" style="flex-direction: column; align-items: stretch; gap: 16px;">
             <!-- Enable Crop Mode Checkbox -->
@@ -159,47 +159,26 @@
               <label for="cropModeCheckbox">Enable manual crop (uses auto center-crop if disabled)</label>
             </div>
 
-            <!-- Crop Preview Canvas (shown when crop mode enabled) -->
-            <div id="cropPreviewContainer" style="display: none; flex-direction: column; gap: 8px; align-items: center;">
-              <p style="margin: 0; font-size: 0.9rem; color: #4a4a68;">Drag to move • Use sliders to adjust</p>
-              <div style="position: relative; width: 100%; max-width: 300px; aspect-ratio: 1; background: #f0f0f7; border-radius: 8px; overflow: hidden; border: 2px solid #d6d6e7;">
-                <canvas id="cropPreviewCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
-              </div>
-            </div>
-
-            <!-- Crop Sliders (shown when crop mode enabled) -->
-            <div id="cropSliders" style="display: none; gap: 12px; flex-direction: column;">
-              <!-- Position X Slider -->
-              <div class="form-group" style="flex-direction: column; gap: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="cropXSlider">Position X:</label>
-                  <span id="cropXValue" style="font-weight: 600;">0</span>
-                </div>
-                <input type="range" id="cropXSlider" min="0" max="500" value="0" step="1" style="width: 100%; cursor: pointer;" />
+            <!-- Image Crop Interface (shown when crop mode enabled) -->
+            <div id="cropInterfaceContainer" style="display: none; flex-direction: column; gap: 12px;">
+              <p style="margin: 0; font-size: 0.9rem; color: #4a4a68; text-align: center;">
+                <strong>Click and drag</strong> the green box to reposition • <strong>Drag edges/corners</strong> to resize
+              </p>
+              
+              <!-- Crop Canvas Container -->
+              <div id="imageUploadPreviewContainer" style="position: relative; width: 100%; background: #f0f0f7; border-radius: 8px; overflow: hidden; border: 2px solid #d6d6e7; max-width: 100%; margin: 0 auto;">
+                <canvas id="imageCropCanvas" style="width: 100%; height: auto; display: block; cursor: crosshair;"></canvas>
               </div>
 
-              <!-- Position Y Slider -->
-              <div class="form-group" style="flex-direction: column; gap: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="cropYSlider">Position Y:</label>
-                  <span id="cropYValue" style="font-weight: 600;">0</span>
-                </div>
-                <input type="range" id="cropYSlider" min="0" max="500" value="0" step="1" style="width: 100%; cursor: pointer;" />
+              <!-- Quick Actions -->
+              <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button id="confirmCropButton" type="button" class="button-secondary">✓ Confirm Crop</button>
+                <button id="resetCropButton" type="button" class="button-secondary">↺ Reset to Center</button>
               </div>
 
-              <!-- Size Slider -->
-              <div class="form-group" style="flex-direction: column; gap: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="cropSizeSlider">Size:</label>
-                  <span id="cropSizeValue" style="font-weight: 600;">100</span>
-                </div>
-                <input type="range" id="cropSizeSlider" min="50" max="500" value="100" step="1" style="width: 100%; cursor: pointer;" />
-              </div>
-
-              <!-- Action Buttons -->
-              <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button id="confirmCropButton" type="button" class="button-secondary">Confirm Crop</button>
-                <button id="resetCropButton" type="button" class="button-secondary">Reset to Center</button>
+              <!-- Crop Info Display -->
+              <div id="cropInfo" style="padding: 12px; background: #f0f0f7; border-radius: 6px; font-size: 0.85rem; color: #4a4a68; text-align: center;">
+                Crop box position and size will appear here
               </div>
             </div>
 

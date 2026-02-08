@@ -99,17 +99,11 @@ const gridHelperText = document.getElementById("gridHelperText");  // Helper tex
 // Crop Tool Elements
 const cropControlCard = document.getElementById("cropControlCard");        // Crop panel (shown when image loaded)
 const cropModeCheckbox = document.getElementById("cropModeCheckbox");      // Enable/disable crop
-const cropXSlider = document.getElementById("cropXSlider");                // Position X slider
-const cropYSlider = document.getElementById("cropYSlider");                // Position Y slider
-const cropSizeSlider = document.getElementById("cropSizeSlider");          // Size slider
-const cropXValue = document.getElementById("cropXValue");                  // X display value
-const cropYValue = document.getElementById("cropYValue");                  // Y display value
-const cropSizeValue = document.getElementById("cropSizeValue");            // Size display value
 const confirmCropButton = document.getElementById("confirmCropButton");    // Confirm button
 const resetCropButton = document.getElementById("resetCropButton");        // Reset button
 const cropStatus = document.getElementById("cropStatus");                  // Status message
-const cropPreviewCanvas = document.getElementById("cropPreviewCanvas");    // Crop preview canvas
-const cropPreviewContainer = document.getElementById("cropPreviewContainer"); // Crop preview container
+const imageCropCanvas = document.getElementById("imageCropCanvas");        // Image crop canvas for visual interaction
+const cropInterfaceContainer = document.getElementById("cropInterfaceContainer"); // Crop interface container
 
 // ============================================================================
 // Canvas Setup
@@ -302,127 +296,189 @@ function drawGridLabels() {
  */
 /**
  * Update UI visibility based on crop mode state.
- * Shows/hides crop sliders and updates display values.
+ * Shows/hides crop interface and updates display values.
  */
 function updateCropModeUI() {
   const isEnabled = cropModeCheckbox.checked;
-  const cropSliders = document.getElementById("cropSliders");
   
-  if (isEnabled) {
-    cropSliders.style.display = "flex";
-    cropPreviewContainer.style.display = "flex";
-    updateCropBoxDisplay();
-    renderCropPreview();
+  if (isEnabled && CURRENT_IMAGE) {
+    cropInterfaceContainer.style.display = "flex";
+    drawCropOverlay();
   } else {
-    cropSliders.style.display = "none";
-    cropPreviewContainer.style.display = "none";
+    cropInterfaceContainer.style.display = "none";
   }
 }
 
 /**
- * Render the crop preview canvas showing the image with crop overlay.
- * Displays the current crop box position and size with visual feedback.
+ * Draw the interactive crop overlay on the canvas.
+ * Shows the image with semi-transparent overlay and interactive crop box.
  */
-function renderCropPreview() {
-  if (!CURRENT_IMAGE) return;
+function drawCropOverlay() {
+  if (!CURRENT_IMAGE || !imageCropCanvas) return;
   
-  const canvas = cropPreviewCanvas;
+  const canvas = imageCropCanvas;
   const ctx = canvas.getContext("2d");
-  
-  // Set canvas size to match its display size
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  
-  const canvasWidth = canvas.width;
-  const canvasHeight = canvas.height;
   
   const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
   const { x: cropX, y: cropY, width: cropW, height: cropH } = cropBox;
   
+  // Set canvas to display size for proper rendering
+  const container = canvas.parentElement;
+  const containerWidth = container.offsetWidth;
+  const maxCanvasHeight = Math.max(300, Math.min(500, imgHeight / imgWidth * containerWidth));
+  
+  canvas.width = containerWidth;
+  canvas.height = maxCanvasHeight;
+  
   // Calculate scale to fit image in canvas
-  const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+  const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight);
   const scaledImgWidth = imgWidth * scale;
   const scaledImgHeight = imgHeight * scale;
-  const offsetX = (canvasWidth - scaledImgWidth) / 2;
-  const offsetY = (canvasHeight - scaledImgHeight) / 2;
+  const imgOffsetX = (canvas.width - scaledImgWidth) / 2;
+  const imgOffsetY = (canvas.height - scaledImgHeight) / 2;
   
   // Draw full image
-  ctx.drawImage(CURRENT_IMAGE, offsetX, offsetY, scaledImgWidth, scaledImgHeight);
+  ctx.drawImage(CURRENT_IMAGE, imgOffsetX, imgOffsetY, scaledImgWidth, scaledImgHeight);
   
-  // Draw semi-transparent overlay for areas outside crop box
-  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  // Draw semi-transparent overlay (darkened areas outside crop)
+  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Clear the crop region to show the uncovered part
-  const cropRegionX = offsetX + cropX * scale;
-  const cropRegionY = offsetY + cropY * scale;
+  // Calculate crop region in canvas coordinates
+  const cropRegionX = imgOffsetX + cropX * scale;
+  const cropRegionY = imgOffsetY + cropY * scale;
   const cropRegionWidth = cropW * scale;
   const cropRegionHeight = cropH * scale;
   
+  // Clear the crop region to show unblocked
   ctx.clearRect(cropRegionX, cropRegionY, cropRegionWidth, cropRegionHeight);
   
-  // Draw the crop box border
+  // Redraw the image over the crop region (unmasked)
+  ctx.drawImage(
+    CURRENT_IMAGE,
+    cropX, cropY, cropW, cropH,
+    cropRegionX, cropRegionY, cropRegionWidth, cropRegionHeight
+  );
+  
+  // Draw green border around crop box
   ctx.strokeStyle = "#4CAF50";
   ctx.lineWidth = 3;
-  ctx.strokeRect(cropRegionX, cropRegionY, cropRegionWidth, cropRegionHeight);
+  ctx.strokeRect(cropRegionX + 1.5, cropRegionY + 1.5, cropRegionWidth - 3, cropRegionHeight - 3);
   
-  // Draw corner handles
-  const handleSize = 8;
-  ctx.fillStyle = "#4CAF50";
+  // Draw corner and edge handles
+  drawCropHandles(ctx, cropRegionX, cropRegionY, cropRegionWidth, cropRegionHeight);
+  
+  // Update crop info display
+  updateCropInfo();
+}
+
+/**
+ * Draw interactive handles around crop box for resizing and dragging.
+ */
+function drawCropHandles(ctx, x, y, w, h) {
+  const handleSize = 12;
+  
+  // Corner handles
   const corners = [
-    [cropRegionX, cropRegionY],
-    [cropRegionX + cropRegionWidth, cropRegionY],
-    [cropRegionX, cropRegionY + cropRegionHeight],
-    [cropRegionX + cropRegionWidth, cropRegionY + cropRegionHeight],
+    { x: x, y: y, cursor: "nw-resize" },           // top-left
+    { x: x + w, y: y, cursor: "ne-resize" },       // top-right
+    { x: x, y: y + h, cursor: "sw-resize" },       // bottom-left
+    { x: x + w, y: y + h, cursor: "se-resize" },   // bottom-right
   ];
-  corners.forEach(([x, y]) => {
-    ctx.fillRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
+  
+  // Edge handles
+  const edges = [
+    { x: x + w / 2, y: y, cursor: "n-resize" },    // top
+    { x: x + w / 2, y: y + h, cursor: "s-resize" }, // bottom
+    { x: x, y: y + h / 2, cursor: "w-resize" },    // left
+    { x: x + w, y: y + h / 2, cursor: "e-resize" }, // right
+  ];
+  
+  // Draw corner handles (green squares)
+  ctx.fillStyle = "#4CAF50";
+  corners.forEach(handle => {
+    ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
   });
   
-  // Draw center handle for dragging
-  const centerX = cropRegionX + cropRegionWidth / 2;
-  const centerY = cropRegionY + cropRegionHeight / 2;
+  // Draw edge handles (smaller)
+  ctx.fillStyle = "#66BB6A";
+  edges.forEach(handle => {
+    ctx.fillRect(handle.x - handleSize / 3, handle.y - handleSize / 3, (handleSize * 2) / 3, (handleSize * 2) / 3);
+  });
+  
+  // Draw center point for moving
   ctx.fillStyle = "#4CAF50";
   ctx.beginPath();
-  ctx.arc(centerX, centerY, handleSize, 0, Math.PI * 2);
+  ctx.arc(x + w / 2, y + h / 2, handleSize / 3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
+
+/**
+ * Update the crop information display.
+ */
+function updateCropInfo() {
+  const cropInfo = document.getElementById("cropInfo");
+  if (cropInfo) {
+    cropInfo.textContent = `📍 Position: (${cropBox.x}, ${cropBox.y}) | 📐 Size: ${cropBox.width}×${cropBox.height}px`;
+  }
+}
+
+/**
+ * Determine which handle (if any) the mouse is hovering over.
+ */
+function getHandleAtPoint(canvasX, canvasY, scale, imgOffsetX, imgOffsetY) {
+  const { x: cropX, y: cropY, width: cropW, height: cropH } = cropBox;
+  const handleSize = 12;
+  
+  const cx = imgOffsetX + cropX * scale;
+  const cy = imgOffsetY + cropY * scale;
+  const cw = cropW * scale;
+  const ch = cropH * scale;
+  
+  // Check corners
+  if (dist(canvasX, canvasY, cx, cy) < handleSize) return "nw-resize";
+  if (dist(canvasX, canvasY, cx + cw, cy) < handleSize) return "ne-resize";
+  if (dist(canvasX, canvasY, cx, cy + ch) < handleSize) return "sw-resize";
+  if (dist(canvasX, canvasY, cx + cw, cy + ch) < handleSize) return "se-resize";
+  
+  // Check edges
+  if (Math.abs(canvasY - cy) < handleSize && canvasX > cx && canvasX < cx + cw) return "n-resize";
+  if (Math.abs(canvasY - (cy + ch)) < handleSize && canvasX > cx && canvasX < cx + cw) return "s-resize";
+  if (Math.abs(canvasX - cx) < handleSize && canvasY > cy && canvasY < cy + ch) return "w-resize";
+  if (Math.abs(canvasX - (cx + cw)) < handleSize && canvasY > cy && canvasY < cy + ch) return "e-resize";
+  
+  // Check center for dragging
+  if (canvasX > cx && canvasX < cx + cw && canvasY > cy && canvasY < cy + ch) return "move";
+  
+  return null;
+}
+
+/**
+ * Calculate distance between two points.
+ */
+function dist(x1, y1, x2, y2) {
+  return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
+
 
 /**
  * Update crop box with new position/size.
  * Ensures values stay within image bounds.
  */
-function updateCropBox(newX, newY, newSize) {
+function updateCropBox(newX, newY, newWidth, newHeight) {
   const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
   
-  // Constrain size to image dimensions
-  const maxSize = Math.min(imgWidth, imgHeight);
-  cropBox.width = Math.max(50, Math.min(newSize, maxSize));
-  cropBox.height = cropBox.width; // Keep it square
+  // Constrain width and height to image dimensions
+  const minSize = 50;
+  cropBox.width = Math.max(minSize, Math.min(newWidth || cropBox.width, imgWidth));
+  cropBox.height = Math.max(minSize, Math.min(newHeight || cropBox.height, imgHeight));
   
   // Constrain position to keep crop box within image
   cropBox.x = Math.max(0, Math.min(newX, imgWidth - cropBox.width));
   cropBox.y = Math.max(0, Math.min(newY, imgHeight - cropBox.height));
-}
-
-/**
- * Update slider displays and sync crop box values.
- */
-function updateCropBoxDisplay() {
-  document.getElementById("cropXSlider").value = cropBox.x;
-  document.getElementById("cropYSlider").value = cropBox.y;
-  document.getElementById("cropSizeSlider").value = cropBox.width;
-  
-  document.getElementById("cropXValue").textContent = cropBox.x;
-  document.getElementById("cropYValue").textContent = cropBox.y;
-  document.getElementById("cropSizeValue").textContent = cropBox.width;
-  
-  // Re-render crop preview and pattern with new crop
-  if (CURRENT_IMAGE) {
-    renderCropPreview();
-    renderPattern(CURRENT_IMAGE);
-  }
 }
 
 /**
@@ -899,17 +955,11 @@ imageInput.addEventListener("change", (event) => {
     cropBox.x = (image.width - cropBox.width) / 2;
     cropBox.y = (image.height - cropBox.height) / 2;
     
-    // Update crop slider ranges based on image size
-    cropXSlider.max = image.width;
-    cropYSlider.max = image.height;
-    cropSizeSlider.max = Math.min(image.width, image.height);
-    
     // Enable crop controls
     cropModeCheckbox.disabled = false;
     
     // Update crop status and UI
     cropStatus.textContent = `📷 Image loaded: ${image.width}×${image.height}px. Crop tool ready!`;
-    updateCropBoxDisplay();
     
     renderPattern(image);
     URL.revokeObjectURL(objectUrl);
@@ -1037,33 +1087,6 @@ cropModeCheckbox.addEventListener("change", () => {
 });
 
 /**
- * Handle crop X position slider change.
- * Updates crop box X coordinate with bounds checking.
- */
-cropXSlider.addEventListener("input", (event) => {
-  const newX = parseInt(event.target.value);
-  updateCropBox(newX, cropBox.y, cropBox.width);
-});
-
-/**
- * Handle crop Y position slider change.
- * Updates crop box Y coordinate with bounds checking.
- */
-cropYSlider.addEventListener("input", (event) => {
-  const newY = parseInt(event.target.value);
-  updateCropBox(cropBox.x, newY, cropBox.width);
-});
-
-/**
- * Handle crop size slider change.
- * Updates crop box size with bounds checking.
- */
-cropSizeSlider.addEventListener("input", (event) => {
-  const newSize = parseInt(event.target.value);
-  updateCropBox(cropBox.x, cropBox.y, newSize);
-});
-
-/**
  * Handle confirm crop button click.
  * Locks in the selected crop region and renders pattern.
  */
@@ -1080,58 +1103,114 @@ resetCropButton.addEventListener("click", () => {
 });
 
 /**
- * Handle crop preview canvas mouse interactions.
- * Allows dragging the crop box and tracking initial position.
+ * Handle interactive crop overlay mouse interactions.
+ * Supports dragging crop box, resizing by handles, and cursor changes.
  */
 let isDraggingCrop = false;
+let dragMode = null; // "move", "n-resize", "s-resize", "e-resize", "w-resize", or corner
 let dragStartX = 0;
 let dragStartY = 0;
-let dragStartCropX = 0;
-let dragStartCropY = 0;
+let dragStartCropBox = { x: 0, y: 0, width: 0, height: 0 };
+let canvasScale = 1;
+let canvasImgOffsetX = 0;
+let canvasImgOffsetY = 0;
 
-cropPreviewCanvas.addEventListener("mousedown", (event) => {
+imageCropCanvas.addEventListener("mousedown", (event) => {
   if (!CURRENT_IMAGE || !cropModeCheckbox.checked) return;
   
-  isDraggingCrop = true;
-  dragStartX = event.clientX;
-  dragStartY = event.clientY;
-  dragStartCropX = cropBox.x;
-  dragStartCropY = cropBox.y;
-  cropPreviewCanvas.style.cursor = "grabbing";
+  const rect = imageCropCanvas.getBoundingClientRect();
+  const canvasX = event.clientX - rect.left;
+  const canvasY = event.clientY - rect.top;
+  
+  // Calculate scale and offsets
+  const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
+  canvasScale = Math.min(imageCropCanvas.width / imgWidth, imageCropCanvas.height / imgHeight);
+  const scaledImgWidth = imgWidth * canvasScale;
+  const scaledImgHeight = imgHeight * canvasScale;
+  canvasImgOffsetX = (imageCropCanvas.width - scaledImgWidth) / 2;
+  canvasImgOffsetY = (imageCropCanvas.height - scaledImgHeight) / 2;
+  
+  // Detect which handle/area was clicked
+  dragMode = getHandleAtPoint(canvasX, canvasY, canvasScale, canvasImgOffsetX, canvasImgOffsetY);
+  
+  if (dragMode) {
+    isDraggingCrop = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    dragStartCropBox = { ...cropBox };
+    imageCropCanvas.style.cursor = dragMode;
+  }
 });
 
 document.addEventListener("mousemove", (event) => {
-  if (!isDraggingCrop || !CURRENT_IMAGE) return;
+  if (!imageCropCanvas || !CURRENT_IMAGE || !cropModeCheckbox.checked) return;
+  
+  if (!isDraggingCrop) {
+    // Update cursor when hovering over handles
+    const rect = imageCropCanvas.getBoundingClientRect();
+    const canvasX = event.clientX - rect.left;
+    const canvasY = event.clientY - rect.top;
+    
+    const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
+    const scale = Math.min(imageCropCanvas.width / imgWidth, imageCropCanvas.height / imgHeight);
+    const scaledImgWidth = imgWidth * scale;
+    const scaledImgHeight = imgHeight * scale;
+    const offsetX = (imageCropCanvas.width - scaledImgWidth) / 2;
+    const offsetY = (imageCropCanvas.height - scaledImgHeight) / 2;
+    
+    const handle = getHandleAtPoint(canvasX, canvasY, scale, offsetX, offsetY);
+    imageCropCanvas.style.cursor = handle ? handle : "default";
+    return;
+  }
   
   const deltaX = event.clientX - dragStartX;
   const deltaY = event.clientY - dragStartY;
   
-  // Scale based on canvas size and image dimensions
-  const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
-  const canvasWidth = cropPreviewCanvas.parentElement.offsetWidth;
-  const canvasHeight = cropPreviewCanvas.parentElement.offsetHeight;
+  // Convert pixel deltas to image coordinates
+  const imageDeltaX = Math.round(deltaX / canvasScale);
+  const imageDeltaY = Math.round(deltaY / canvasScale);
   
-  const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+  let newBox = { ...dragStartCropBox };
   
-  const newX = Math.round(dragStartCropX + deltaX / scale);
-  const newY = Math.round(dragStartCropY + deltaY / scale);
+  if (dragMode === "move") {
+    newBox.x = dragStartCropBox.x + imageDeltaX;
+    newBox.y = dragStartCropBox.y + imageDeltaY;
+  } else if (dragMode === "n-resize") {
+    newBox.y = dragStartCropBox.y + imageDeltaY;
+    newBox.height = dragStartCropBox.height - imageDeltaY;
+  } else if (dragMode === "s-resize") {
+    newBox.height = dragStartCropBox.height + imageDeltaY;
+  } else if (dragMode === "w-resize") {
+    newBox.x = dragStartCropBox.x + imageDeltaX;
+    newBox.width = dragStartCropBox.width - imageDeltaX;
+  } else if (dragMode === "e-resize") {
+    newBox.width = dragStartCropBox.width + imageDeltaX;
+  } else if (dragMode === "nw-resize") {
+    newBox.x = dragStartCropBox.x + imageDeltaX;
+    newBox.y = dragStartCropBox.y + imageDeltaY;
+    newBox.width = dragStartCropBox.width - imageDeltaX;
+    newBox.height = dragStartCropBox.height - imageDeltaY;
+  } else if (dragMode === "ne-resize") {
+    newBox.y = dragStartCropBox.y + imageDeltaY;
+    newBox.width = dragStartCropBox.width + imageDeltaX;
+    newBox.height = dragStartCropBox.height - imageDeltaY;
+  } else if (dragMode === "sw-resize") {
+    newBox.x = dragStartCropBox.x + imageDeltaX;
+    newBox.width = dragStartCropBox.width - imageDeltaX;
+    newBox.height = dragStartCropBox.height + imageDeltaY;
+  } else if (dragMode === "se-resize") {
+    newBox.width = dragStartCropBox.width + imageDeltaX;
+    newBox.height = dragStartCropBox.height + imageDeltaY;
+  }
   
-  updateCropBox(newX, newY, cropBox.width);
+  updateCropBox(newBox.x, newBox.y, newBox.width, newBox.height);
+  drawCropOverlay();
 });
 
 document.addEventListener("mouseup", () => {
   if (isDraggingCrop) {
     isDraggingCrop = false;
-    cropPreviewCanvas.style.cursor = "grab";
+    dragMode = null;
+    imageCropCanvas.style.cursor = "default";
   }
-});
-
-cropPreviewCanvas.addEventListener("mouseenter", () => {
-  if (!isDraggingCrop && CURRENT_IMAGE && cropModeCheckbox.checked) {
-    cropPreviewCanvas.style.cursor = "grab";
-  }
-});
-
-cropPreviewCanvas.addEventListener("mouseleave", () => {
-  cropPreviewCanvas.style.cursor = "default";
 });
