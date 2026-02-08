@@ -234,6 +234,19 @@ button:not(:disabled):hover {
   transform: translateY(-1px);
 }
 
+/* Secondary button style for crop tool actions */
+.button-secondary {
+  background: #e0e0f0 !important;
+  color: #1e1e2f !important;
+  padding: 8px 14px !important;
+  font-size: 0.9rem !important;
+  flex: 1;
+}
+
+.button-secondary:not(:disabled):hover {
+  background: #d0d0e0 !important;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(280px, 2fr) minmax(200px, 1fr);

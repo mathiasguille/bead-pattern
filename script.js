@@ -96,6 +96,19 @@ const gridSizeDisplay = document.getElementById("gridSizeDisplay"); // Grid size
 const gridTradeoff = document.getElementById("gridTradeoff");      // Tradeoff info panel
 const gridHelperText = document.getElementById("gridHelperText");  // Helper text for grid size
 
+// Crop Tool Elements
+const cropControlCard = document.getElementById("cropControlCard");        // Crop panel (shown when image loaded)
+const cropModeCheckbox = document.getElementById("cropModeCheckbox");      // Enable/disable crop
+const cropXSlider = document.getElementById("cropXSlider");                // Position X slider
+const cropYSlider = document.getElementById("cropYSlider");                // Position Y slider
+const cropSizeSlider = document.getElementById("cropSizeSlider");          // Size slider
+const cropXValue = document.getElementById("cropXValue");                  // X display value
+const cropYValue = document.getElementById("cropYValue");                  // Y display value
+const cropSizeValue = document.getElementById("cropSizeValue");            // Size display value
+const confirmCropButton = document.getElementById("confirmCropButton");    // Confirm button
+const resetCropButton = document.getElementById("resetCropButton");        // Reset button
+const cropStatus = document.getElementById("cropStatus");                  // Status message
+
 // ============================================================================
 // Canvas Setup
 // ============================================================================
@@ -123,6 +136,22 @@ patternCanvas.height = GRID_SIZE * CELL_SIZE + LABEL_OFFSET;
 const paletteUsage = new Map();
 /** 2D grid storing palette index for each bead position */
 let pixelGrid = null;
+
+// ============================================================================
+// Crop Tool State
+// ============================================================================
+
+/** Crop mode enabled/disabled */
+let cropMode = false;
+/** Crop box dimensions and position */
+let cropBox = {
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100
+};
+/** Original image dimensions (for bounds checking) */
+let sourceImageDimensions = { width: 0, height: 0 };
 
 // ============================================================================
 // Rendering & Display Functions
@@ -244,6 +273,91 @@ function drawGridLabels() {
     const x = labelOffset - 8;
     const y = i * CELL_SIZE + CELL_SIZE / 2 + labelOffset;
     canvasContext.fillText(number, x, y);
+  }
+}
+
+// ============================================================================
+// Crop Tool Functions
+// ============================================================================
+
+/**
+ * Enable or disable crop mode based on checkbox.
+ * Shows/hides crop sliders and updates UI.
+ */
+/**
+ * Update UI visibility based on crop mode state.
+ * Shows/hides crop sliders and updates display values.
+ */
+function updateCropModeUI() {
+  const isEnabled = cropModeCheckbox.checked;
+  const cropSliders = document.getElementById("cropSliders");
+  
+  if (isEnabled) {
+    cropSliders.style.display = "flex";
+    updateCropBoxDisplay();
+  } else {
+    cropSliders.style.display = "none";
+  }
+}
+
+/**
+ * Update crop box with new position/size.
+ * Ensures values stay within image bounds.
+ */
+function updateCropBox(newX, newY, newSize) {
+  const { width: imgWidth, height: imgHeight } = sourceImageDimensions;
+  
+  // Constrain size to image dimensions
+  const maxSize = Math.min(imgWidth, imgHeight);
+  cropBox.width = Math.max(50, Math.min(newSize, maxSize));
+  cropBox.height = cropBox.width; // Keep it square
+  
+  // Constrain position to keep crop box within image
+  cropBox.x = Math.max(0, Math.min(newX, imgWidth - cropBox.width));
+  cropBox.y = Math.max(0, Math.min(newY, imgHeight - cropBox.height));
+}
+
+/**
+ * Update slider displays and sync crop box values.
+ */
+function updateCropBoxDisplay() {
+  document.getElementById("cropXSlider").value = cropBox.x;
+  document.getElementById("cropYSlider").value = cropBox.y;
+  document.getElementById("cropSizeSlider").value = cropBox.width;
+  
+  document.getElementById("cropXValue").textContent = cropBox.x;
+  document.getElementById("cropYValue").textContent = cropBox.y;
+  document.getElementById("cropSizeValue").textContent = cropBox.width;
+  
+  // Re-render with new crop
+  if (CURRENT_IMAGE) {
+    renderPattern(CURRENT_IMAGE);
+  }
+}
+
+/**
+ * Reset crop to center crop (auto-crop mode).
+ */
+function resetCrop() {
+  if (!CURRENT_IMAGE) return;
+  
+  cropMode = false;
+  cropModeCheckbox.checked = false;
+  updateCropModeUI();
+  
+  if (CURRENT_IMAGE) {
+    renderPattern(CURRENT_IMAGE);
+  }
+}
+
+/**
+ * Apply crop and continue with pattern rendering.
+ */
+function confirmCrop() {
+  cropMode = true;
+  // Pattern will use the cropBox when rendering
+  if (CURRENT_IMAGE) {
+    renderPattern(CURRENT_IMAGE);
   }
 }
 
@@ -535,14 +649,36 @@ function applyMedianFilter(imageData) {
 function renderPattern(image) {
   offscreenContext.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
 
-  const ratio = Math.min(
-    image.width / GRID_SIZE,
-    image.height / GRID_SIZE
-  );
-  const cropWidth = GRID_SIZE * ratio;
-  const cropHeight = GRID_SIZE * ratio;
-  const offsetX = (image.width - cropWidth) / 2;
-  const offsetY = (image.height - cropHeight) / 2;
+  // Store original image dimensions for crop tool bounds checking
+  sourceImageDimensions.width = image.width;
+  sourceImageDimensions.height = image.height;
+
+  // ========================================================================
+  // Determine crop region: either auto center-crop or user-selected crop
+  // ========================================================================
+  let offsetX, offsetY, cropWidth, cropHeight;
+  
+  if (cropMode && cropModeCheckbox.checked) {
+    // User-selected crop mode
+    const ratio = Math.min(
+      image.width / cropBox.width,
+      image.height / cropBox.height
+    );
+    cropWidth = cropBox.width * ratio;
+    cropHeight = cropBox.height * ratio;
+    offsetX = cropBox.x * ratio;
+    offsetY = cropBox.y * ratio;
+  } else {
+    // Default center-crop mode
+    const ratio = Math.min(
+      image.width / GRID_SIZE,
+      image.height / GRID_SIZE
+    );
+    cropWidth = GRID_SIZE * ratio;
+    cropHeight = GRID_SIZE * ratio;
+    offsetX = (image.width - cropWidth) / 2;
+    offsetY = (image.height - cropHeight) / 2;
+  }
 
   offscreenContext.drawImage(
     image,
@@ -661,6 +797,28 @@ imageInput.addEventListener("change", (event) => {
 
   image.onload = () => {
     CURRENT_IMAGE = image;
+    
+    // Initialize crop tool
+    cropControlCard.style.display = "block";
+    sourceImageDimensions.width = image.width;
+    sourceImageDimensions.height = image.height;
+    
+    // Set default crop box to center of image
+    const cropSize = Math.min(image.width, image.height) * 0.8; // 80% of smallest dimension
+    cropBox.width = Math.min(cropSize, 500);
+    cropBox.height = cropBox.width;
+    cropBox.x = (image.width - cropBox.width) / 2;
+    cropBox.y = (image.height - cropBox.height) / 2;
+    
+    // Update crop slider ranges based on image size
+    cropXSlider.max = image.width;
+    cropYSlider.max = image.height;
+    cropSizeSlider.max = Math.min(image.width, image.height);
+    
+    // Update crop status and UI
+    cropStatus.textContent = `📷 Image loaded: ${image.width}×${image.height}px. Crop tool ready!`;
+    updateCropBoxDisplay();
+    
     renderPattern(image);
     URL.revokeObjectURL(objectUrl);
   };
@@ -772,4 +930,59 @@ gridLabelsCheckbox.addEventListener("change", () => {
  */
 gridSizeSlider.addEventListener("input", (event) => {
   updateGridSize(parseInt(event.target.value));
+});
+
+// ============================================================================
+// Crop Tool Event Handlers
+// ============================================================================
+
+/**
+ * Handle crop mode checkbox toggle.
+ * Shows/hides crop sliders and updates UI.
+ */
+cropModeCheckbox.addEventListener("change", () => {
+  updateCropModeUI();
+});
+
+/**
+ * Handle crop X position slider change.
+ * Updates crop box X coordinate with bounds checking.
+ */
+cropXSlider.addEventListener("input", (event) => {
+  const newX = parseInt(event.target.value);
+  updateCropBox(newX, cropBox.y, cropBox.width);
+});
+
+/**
+ * Handle crop Y position slider change.
+ * Updates crop box Y coordinate with bounds checking.
+ */
+cropYSlider.addEventListener("input", (event) => {
+  const newY = parseInt(event.target.value);
+  updateCropBox(cropBox.x, newY, cropBox.width);
+});
+
+/**
+ * Handle crop size slider change.
+ * Updates crop box size with bounds checking.
+ */
+cropSizeSlider.addEventListener("input", (event) => {
+  const newSize = parseInt(event.target.value);
+  updateCropBox(cropBox.x, cropBox.y, newSize);
+});
+
+/**
+ * Handle confirm crop button click.
+ * Locks in the selected crop region and renders pattern.
+ */
+confirmCropButton.addEventListener("click", () => {
+  confirmCrop();
+});
+
+/**
+ * Handle reset crop button click.
+ * Resets to auto center-crop mode.
+ */
+resetCropButton.addEventListener("click", () => {
+  resetCrop();
 });

@@ -52,6 +52,61 @@
           <p class="hint">💡 Tip: Use bold, simple images with clear outlines for best results.</p>
         </div>
 
+        <!-- Crop Tool Panel (Optional) -->
+        <div class="control-card" id="cropControlCard" style="display: none;">
+          <div>
+            <h2>Crop Tool</h2>
+            <p>Manually select which part of the image to use (optional).</p>
+          </div>
+          <div class="control-actions" style="flex-direction: column; align-items: stretch; gap: 16px;">
+            <!-- Enable Crop Mode Checkbox -->
+            <div class="form-group checkbox">
+              <input type="checkbox" id="cropModeCheckbox" />
+              <label for="cropModeCheckbox">Enable manual crop (uses auto center-crop if disabled)</label>
+            </div>
+
+            <!-- Crop Sliders (shown when crop mode enabled) -->
+            <div id="cropSliders" style="display: none; gap: 12px; flex-direction: column;">
+              <!-- Position X Slider -->
+              <div class="form-group" style="flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="cropXSlider">Position X:</label>
+                  <span id="cropXValue" style="font-weight: 600;">0</span>
+                </div>
+                <input type="range" id="cropXSlider" min="0" max="500" value="0" step="1" style="width: 100%; cursor: pointer;" />
+              </div>
+
+              <!-- Position Y Slider -->
+              <div class="form-group" style="flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="cropYSlider">Position Y:</label>
+                  <span id="cropYValue" style="font-weight: 600;">0</span>
+                </div>
+                <input type="range" id="cropYSlider" min="0" max="500" value="0" step="1" style="width: 100%; cursor: pointer;" />
+              </div>
+
+              <!-- Size Slider -->
+              <div class="form-group" style="flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="cropSizeSlider">Size:</label>
+                  <span id="cropSizeValue" style="font-weight: 600;">100</span>
+                </div>
+                <input type="range" id="cropSizeSlider" min="50" max="500" value="100" step="1" style="width: 100%; cursor: pointer;" />
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button id="confirmCropButton" type="button" class="button-secondary">Confirm Crop</button>
+                <button id="resetCropButton" type="button" class="button-secondary">Reset to Center</button>
+              </div>
+            </div>
+
+            <p id="cropStatus" style="margin: 0; font-size: 0.85rem; color: #5a5a74; font-style: italic;">
+              💡 Upload an image to enable crop tool
+            </p>
+          </div>
+        </div>
+
         <!-- Palette & Grid Options Panel -->
         <div class="control-card">
           <div>
